@@ -482,12 +482,16 @@ async def main():
     init_db()
     application = create_application()
     
+    # ✅ ОБЯЗАТЕЛЬНО: инициализация приложения
+    await application.initialize()
+    await application.start()
+    
     if WEBHOOK_URL:
-        # Устанавливаем вебхук
-        await application.bot.set_webhook(WEBHOOK_URL + WEBHOOK_PATH)
-        logging.info(f"Webhook установлен на {WEBHOOK_URL + WEBHOOK_PATH}")
+        # ✅ Убираем двойной слеш
+        webhook_url = f"{WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
+        await application.bot.set_webhook(webhook_url)
+        logging.info(f"Webhook установлен на {webhook_url}")
 
-        # Обработчик входящих запросов от Telegram
         async def webhook(request: Request):
             try:
                 update_data = await request.json()
@@ -498,22 +502,17 @@ async def main():
                 logging.error(f"Ошибка вебхука: {e}")
                 return Response("error", status_code=500)
 
-        # Создаём Starlette приложение
         starlette_app = Starlette(routes=[
             Route(WEBHOOK_PATH, webhook, methods=["POST"]),
             Route("/", lambda request: JSONResponse({"status": "ok"})),
         ])
 
-        # Запускаем Uvicorn
         port = int(os.getenv("PORT", 10000))
         config = uvicorn.Config(starlette_app, host="0.0.0.0", port=port, log_level="info")
         server = uvicorn.Server(config)
         await server.serve()
     else:
-        # Режим polling (для локальной разработки)
         logging.warning("WEBHOOK_URL не задан, запуск в режиме polling")
-        await application.initialize()
-        await application.start()
         await application.updater.start_polling()
         await application.updater.idle()
 
