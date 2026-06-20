@@ -495,3 +495,8 @@ async def async_main():
 
 if __name__ == "__main__":
     asyncio.run(async_main())
+from telegram_escape import tg_escape
+
+# В функции start:
+safe_text = tg_escape(text)
+await update.message.reply_text(safe_text, reply_markup=main_menu_keyboard(), parse_mode="MarkdownV2")
