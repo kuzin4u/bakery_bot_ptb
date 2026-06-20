@@ -227,10 +227,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     add_user(user.id, user.username, user.full_name)
     text = (
-        "🍞 *Добро пожаловать в пекарню Massa Madre!*\n\n"
-        "Мы печём хлеб на живой закваске, зефир, творожную массу и многое другое.\n"
-        "Что желаете? Нажмите кнопку ниже."
-    )
+    "🍞 <b>Добро пожаловать в пекарню Massa Madre!</b>\n\n"
+    "Мы печём хлеб на живой закваске, зефир, творожную массу и многое другое.\n"
+    "Что желаете? Нажмите кнопку ниже."
+)
     await update.message.reply_text(text, reply_markup=main_menu_keyboard(), parse_mode="MarkdownV2")
 
 async def back_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
