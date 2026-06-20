@@ -442,31 +442,80 @@ def main():
     return application
 
 # ---------- STARLETTE APP (для webhook) ----------
-app = Starlette(routes=[
-    Route(WEBHOOK_PATH, endpoint=async def webhook(request: Request):
-        # Получаем обновление от Telegram
-        update_data = await request.json()
-        # Создаём объект Update и передаём в application
-        update = Update.de_json(update_data, application.bot)
-        await application.process_update(update)
-        return Response("OK", status_code=200)
-    , methods=["POST"]),
-    Route("/", endpoint=lambda request: JSONResponse({"status": "ok"})),
-])
+# ... (ваши предыдущие импорты и обработчики)
 
-# Создаём application объект перед использованием в webhook
-application = main()
+# ---------- СОЗДАНИЕ ПРИЛОЖЕНИЯ ----------
+def create_application():
+    """Создаёт и настраивает приложение python-telegram-bot"""
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    # Регистрируем обработчики команд
+    application.add_handler(CommandHandler("start", start))
+
+    # Регистрируем обработчики callback
+    application.add_handler(CallbackQueryHandler(back_main, pattern="^back_main$"))
+    application.add_handler(CallbackQueryHandler(show_catalog, pattern="^catalog$"))
+    application.add_handler(CallbackQueryHandler(show_product, pattern="^product_"))
+    application.add_handler(CallbackQueryHandler(add_to_cart, pattern="^add_to_cart_"))
+    application.add_handler(CallbackQueryHandler(remove_from_cart, pattern="^remove_from_cart_"))
+    application.add_handler(CallbackQueryHandler(show_cart, pattern="^cart$"))
+    application.add_handler(CallbackQueryHandler(clear_cart, pattern="^clear_cart$"))
+    application.add_handler(CallbackQueryHandler(show_orders, pattern="^orders$"))
+    application.add_handler(CallbackQueryHandler(show_profile, pattern="^profile$"))
+    application.add_handler(CallbackQueryHandler(ask_ai_start, pattern="^ask_ai$"))
+
+    # Обработчик оформления заказа (ConversationHandler)
+    conv_handler = ConversationHandler(
+        entry_points=[CallbackQueryHandler(checkout_start, pattern="^checkout$")],
+        states={
+            ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_address)],
+            COMMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_comment)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel_checkout)],
+    )
+    application.add_handler(conv_handler)
+
+    return application
 
 # ---------- ЗАПУСК ----------
-if __name__ == "__main__":
-    # Если задан WEBHOOK_URL, используем вебхук
+async def main():
+    init_db()
+    application = create_application()
+    
     if WEBHOOK_URL:
         # Устанавливаем вебхук
-        asyncio.run(application.bot.set_webhook(WEBHOOK_URL + WEBHOOK_PATH))
+        await application.bot.set_webhook(WEBHOOK_URL + WEBHOOK_PATH)
         logging.info(f"Webhook установлен на {WEBHOOK_URL + WEBHOOK_PATH}")
-        # Запускаем сервер Uvicorn
-        uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+
+        # Обработчик входящих запросов от Telegram
+        async def webhook(request: Request):
+            try:
+                update_data = await request.json()
+                update = Update.de_json(update_data, application.bot)
+                await application.process_update(update)
+                return Response("OK", status_code=200)
+            except Exception as e:
+                logging.error(f"Ошибка вебхука: {e}")
+                return Response("error", status_code=500)
+
+        # Создаём Starlette приложение
+        starlette_app = Starlette(routes=[
+            Route(WEBHOOK_PATH, webhook, methods=["POST"]),
+            Route("/", lambda request: JSONResponse({"status": "ok"})),
+        ])
+
+        # Запускаем Uvicorn
+        port = int(os.getenv("PORT", 10000))
+        config = uvicorn.Config(starlette_app, host="0.0.0.0", port=port, log_level="info")
+        server = uvicorn.Server(config)
+        await server.serve()
     else:
-        # Иначе запускаем в режиме polling (для локальной разработки)
+        # Режим polling (для локальной разработки)
         logging.warning("WEBHOOK_URL не задан, запуск в режиме polling")
-        application.run_polling()
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
+        await application.updater.idle()
+
+if __name__ == "__main__":
+    asyncio.run(main())
