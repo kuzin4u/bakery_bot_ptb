@@ -71,7 +71,22 @@ python bot.py
 
 🧩 Структура проекта
 text
-bakery-bot/
+bakery-bot/ (1)
+├── .env.example
+├── .gitignore
+├── README.md
+├── requirements.txt
+├── bot.py
+├── data/
+│   └── .gitkeep          # здесь будет bakery.db
+├── src/                  # (опционально, если будете разбивать код)
+│   └── __init__.py
+├── docs/                 # документация
+│   └── README.md
+└── tests/                # тесты
+    └── __init__.py
+
+bakery-bot/ (2)
 ├── bot.py              # основной код бота
 ├── requirements.txt    # зависимости
 ├── .env                # переменные окружения (не в репозитории!)
