@@ -238,6 +238,11 @@ async def back_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     await query.edit_message_text("🍞 <b>Главное меню</b>", reply_markup=main_menu_keyboard(), parse_mode="HTML")
 
+async def back_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text("📋 <b>Каталог</b>\nВыберите категорию:", reply_markup=products_keyboard(), parse_mode="HTML")
+
 async def show_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
