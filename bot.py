@@ -448,7 +448,8 @@ def create_application():
     application.add_handler(CallbackQueryHandler(show_orders, pattern="^orders$"))
     application.add_handler(CallbackQueryHandler(show_profile, pattern="^profile$"))
     application.add_handler(CallbackQueryHandler(ask_ai_start, pattern="^ask_ai$"))
-
+    application.add_handler(CallbackQueryHandler(back_catalog, pattern="^back_catalog$"))
+    
     conv_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(checkout_start, pattern="^checkout$")],
         states={
